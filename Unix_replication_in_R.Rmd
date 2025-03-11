@@ -1,0 +1,126 @@
+---
+title: "Unix_replication_in_R"
+output: html_document
+date: "2025-03-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Replication of UNIX assignment in R
+
+```{r}
+# libraries
+library(tidyverse) # basic R functions
+library(ggplot2) # data visualization
+library(janitor) # df clean up
+library(tibble) # df clean up
+
+# read - in
+getwd()
+genotypes <- read_table("raw_data/fang_et_al_genotypes.txt")
+snp <- read_table("raw_data/snp_position.txt")
+```
+
+#### Data Inspection
+
+```{r}
+# dimensions
+dim(genotypes)
+dim(snp)
+
+# variable names
+colnames(genotypes)
+colnames(snp)
+
+# variable data type
+unlist(lapply(genotypes, class))
+unlist(lapply(snp, class))
+
+str(genotypes)
+str(snp)
+
+# inital look
+head(genotypes)
+head(snp)
+```
+
+**Explanation**
+
+-   The dimensions of the `fang_et_al_genotypes` file is 2782 observations (rows) with 986 variables (columns)
+-   The dimensions of the `snp_position` file is 983 observations (rows) with 15 variables (columns)
+-   First look at the variable names of the `fang` file displays "Sample_ID", "JG_OTU", and "Group" followed by a list of markers
+-   First look at the variable names of the `snp` file displays the key variables needed in this analysis ("SNP_ID", "Chromosome", and "Position") along with 12 other variables irrelevant to this particular analysis
+-   For both the `fang` and `snp` files, all the variables are "character" type, which may pose issues in the future with ordering
+-   The head function displays the first 10 rows of each file revealing the variables in the `fang` file match the marker IDs in the "SNP_ID" column in the `snp` file
+    -   This also gives insight on the content of the data with the `fang` file including mostly genotype calls at SNP markers using biallelic notation (allele/allele), and the `snp`file including information about the SNP markers, such as the chromosome(s) they are located on and where on the chromosome they are located (described by the base pair number)
+
+#### Data Processing
+
+**Filtering**
+
+The following section filters the original `fang` file into two data frames (one for maize & one for teosinte) and removes unnecessary variables. This also prepares the `snp` file by removing unnecessary variables for this analysis.
+
+```{r}
+# filtering for maize (Group = ZMMIL, ZMMLR, and ZMMMR) & remove JG_OTU column
+maize <- genotypes |>
+  filter(Group %in% c("ZMMIL", "ZMMLR", "ZMMMR")) |>
+  select(!c(Group, JG_OTU))
+
+# filtering for teosinte (Group = ZMPBA, ZMPIL, and ZMPJA)  remove JG_OTU column
+teosinte <- genotypes |>
+  filter(Group %in% c("ZMPBA", "ZMPIL", "ZMPJA")) |>
+  select(!c(Group, JG_OTU))
+
+# checking filtering success
+all_other_groups <- genotypes |>
+  filter(!Group %in% c("ZMMIL", "ZMMLR", "ZMMMR", "ZMPBA", "ZMPIL", "ZMPJA"))
+total_obs <- nrow(all_other_groups) + nrow(maize) + nrow(teosinte)
+total_obs #2782 checks out
+
+# select for "SNP_ID", "Chromosome", and "Position" columns in `snp` file
+snp_filt <- snp |>
+  select(c("SNP_ID", "Chromosome", "Position"))
+```
+
+**Transposing, Joining**
+
+The following section transposes the `maize` and `teosinte` data frames, ensures the column names are accurate, and creates a column labeled "SNP_ID" containing the SNP markers that match the SNP IDs in the `snp_filt` df to prepare for joining. The two genotype files are joined with the `snp_filt` df to add the chromosome and snp position into the df. Since the columns are added at the end of the column names, they are relocated to the beginning for easy examination. 
+
+```{r}
+# ~~~ MAIZE ~~~
+
+# transposed maize df
+maize_t <- as.data.frame(t(maize))
+
+# row 1 to column names & row names to column
+maize_t <- maize_t |>
+  row_to_names(row_number = 1) |>
+  rownames_to_column("SNP_ID")
+
+# joining `snp` & `maize_t` by "SNP_ID"
+maize_join <- full_join(maize_t, snp_filt, by = "SNP_ID")
+
+# moving "Chromosome" & "Position" columns forward
+maize_join <- maize_join |>
+  relocate(ncol(maize_join)-1, ncol(maize_join), .after = 1)
+
+
+# ~~~ TEOSINTE ~~~
+
+# transposed teosinte df
+teosinte_t <- as.data.frame(t(teosinte))
+
+# row 1 to column names & row names to column
+teosinte_t <- teosinte_t |>
+  row_to_names(row_number = 1) |>
+  rownames_to_column("SNP_ID")
+
+# joining `snp` & `teosinte_t` by "SNP_ID"
+teosinte_join <- full_join(teosinte_t, snp_filt, by = "SNP_ID")
+
+# moving "Chromosome" & "Position" columns forward
+teosinte_join <- teosinte_join |>
+  relocate(ncol(teosinte_join)-1, ncol(teosinte_join), .after = 1)
+```
