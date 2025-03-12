@@ -86,7 +86,7 @@ snp_filt <- snp |>
 
 **Transposing, Joining**
 
-The following section transposes the `maize` and `teosinte` data frames, ensures the column names are accurate, and creates a column labeled "SNP_ID" containing the SNP markers that match the SNP IDs in the `snp_filt` df to prepare for joining. The two genotype files are joined with the `snp_filt` df to add the chromosome and snp position into the df. Since the columns are added at the end of the column names, they are relocated to the beginning for easy examination. 
+The following section transposes the `maize` and `teosinte` data frames, ensures the column names are accurate, and creates a column labeled "SNP_ID" containing the SNP markers that match the SNP IDs in the `snp_filt` df to prepare for joining. The two genotype files are joined with the `snp_filt` df to add the chromosome and snp position into the df. Since the columns are added at the end of the column names, they are relocated to the beginning for easy examination.
 
 ```{r}
 # ~~~ MAIZE ~~~
@@ -123,4 +123,85 @@ teosinte_join <- full_join(teosinte_t, snp_filt, by = "SNP_ID")
 # moving "Chromosome" & "Position" columns forward
 teosinte_join <- teosinte_join |>
   relocate(ncol(teosinte_join)-1, ncol(teosinte_join), .after = 1)
+```
+
+**Filtering for new file output**
+
+To filter, edit, and create output files efficiently, I designed a function that completes all steps required when provided the following input information:
+
+-   date = the input dataframe (`maize_join` or `teosinte_join`)
+-   chr_num = the chromosome number to filter for
+-   output_prefix = prefix for naming the output file (`maize` or `teosinte`)
+-   replace_na = the string to replace "?/?" values (`?/?` or `-/-`)
+-   sort_order (default = "asc") = specifies whether to sort position by ascending ("asc") or descending ("desc") order; if no input is added, the function will automatically sort position in ascending order
+-   output_dir = directory (aka folder) output files are saved in
+
+Other characteristics of the function include:
+
+-   `!grepl("unknown|multiple", Chromosome))` = removes SNPs found on multiple chromosomes or with an unknown chromosome
+-   `mutate(across(everything(), ~ gsub("\\?/\\?", replace_na, .)))` = replaces all unknown genotype data (`?/?`) with either (`?/?` [same] or `-/-`)
+-   `"\\?"` = slashes must be present in order to treat the symbol "?" as a string character rather than a code (typically for 0 or previous character)
+-   `sprintf("%s_chr%d_%s.txt", output_prefix, chr_num, sort_order)` = assigns new data file by consistent name in the format: <output_prefix>*chr*<chr_num><sort_order>.txt
+-   `write_tsv(filtered_data, output_file)` = saves file to current working directory `if(!dir.exists(output_dir)) {dir.create(output_dir, recursive = FALSE)}` = "if directory does not exist (`!dir.exists`), it will create a directory named "processed_data" unless otherwise specified
+-   recursive = FALSE assumes all parent directories exist (EX: output_dir = "a/b/c/d" assumes "a/b/c" directories already exist even if "d" does not, and will only create a new directory "d"
+
+```{r}
+process_chr_data <- function(data, chr_num, output_prefix, replace_na, sort_order = "asc", output_dir = "processed_data") {
+  # create file output directory (unless it already exists)
+  if(!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = FALSE)
+  }
+  
+  # filter data
+  filtered_data <- data %>%
+    filter(Chromosome == chr_num, !grepl("unknown|multiple", Chromosome)) %>%
+    mutate(across(everything(), ~ gsub("\\?/\\?", replace_na, .))) %>%
+    arrange(ifelse(sort_order == "asc", Position, desc(Position)))
+
+  # write to file
+  output_file <- file.path(output_dir, sprintf("%s_chr%d_%s.txt", output_prefix, chr_num, sort_order))
+  write_tsv(filtered_data, output_file)
+}
+```
+
+```{r}
+# ~~~ maize ascending ~~~
+process_chr_data(maize_join, 1, "maize", "?/?", "asc", output_dir = "maize_data")
+maize_chr1_asc_check <- read_table("maize_data/maize_chr1_asc.txt")
+
+# ~~~ maize descending ~~~
+process_chr_data(maize_join, 1, "maize", "-/-", "desc", "maize_data") 
+
+
+# ~~~ teosinte ascending ~~~
+
+
+
+# ~~~ teosinte descending ~~~
+
+
+
+```
+
+#### Data Processing
+
+**SNPs per chromosome**
+
+```{r}
+
+
+```
+
+**Missing data & amount of heterozygosity**
+
+```{r}
+
+
+```
+
+**Unique visualization: **
+
+```{r}
+
+
 ```
