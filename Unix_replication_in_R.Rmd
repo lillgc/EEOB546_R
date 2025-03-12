@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # libraries
 library(tidyverse) # basic R functions
 library(ggplot2) # data visualization
+library(patchwork) # data visualization
 library(janitor) # df clean up
 library(tibble) # df clean up
 
@@ -141,8 +142,8 @@ Other characteristics of the function include:
 -   `!grepl("unknown|multiple", Chromosome))` = removes SNPs found on multiple chromosomes or with an unknown chromosome
 -   `mutate(across(everything(), ~ gsub("\\?/\\?", replace_na, .)))` = replaces all unknown genotype data (`?/?`) with either (`?/?` [same] or `-/-`)
     -   `"\\?"` = slashes must be present in order to treat the symbol "?" as a string character rather than a code (typically for 0 or previous character)
-- `Position = as.numeric(as.character(Position))` = ensures "Position" column is converted to a character and then converted to a numeric data type (may be issues if not converted to character first)
-- `arrange(if (sort_order == "asc") Position else desc(Position))` = if "sort_order = asc" then arrange by "Position" column (default ascending); if not then arrange by "Position" column in descending order
+-   `Position = as.numeric(as.character(Position))` = ensures "Position" column is converted to a character and then converted to a numeric data type (may be issues if not converted to character first)
+-   `arrange(if (sort_order == "asc") Position else desc(Position))` = if "sort_order = asc" then arrange by "Position" column (default ascending); if not then arrange by "Position" column in descending order
 -   `sprintf("%s_chr%d_%s.txt", output_prefix, chr_num, sort_order)` = assigns new data file by consistent name in the format: <output_prefix>*chr*<chr_num><sort_order>.txt
 -   `write_tsv(filtered_data, output_file)` = saves file to current working directory `if(!dir.exists(output_dir)) {dir.create(output_dir, recursive = FALSE)}` = "if directory does not exist (`!dir.exists`), it will create a directory named "processed_data" unless otherwise specified
     -   recursive = FALSE assumes all parent directories exist (EX: output_dir = "a/b/c/d" assumes "a/b/c" directories already exist even if "d" does not, and will only create a new directory "d"
@@ -168,6 +169,7 @@ process_chr_data <- function(data, chr_num, output_prefix, replace_na, sort_orde
   write_tsv(filtered_data, output_file)
 }
 ```
+
 ```{r}
 # ~~~ maize ascending ~~~
 process_chr_data( # chr1
@@ -233,9 +235,90 @@ lapply(2:10, function(chr) { # chr 2 - 10
 **SNPs per chromosome**
 
 ```{r}
+# count SNPs per chromosome for maize 
+maize_snp_count <- maize_join |>
+  group_by(Chromosome) |>
+  summarise(SNP_count = n(), .groups = "drop")
 
+# ensure Chromosome's are in correct order
+chromosome_order <- c(as.character(1:10), "multiple", "unknown")
 
+maize_snp_count <- maize_snp_count |>
+  mutate(Chromosome = factor(Chromosome, levels = chromosome_order))
+
+# maize SNPs per chromosome plot
+maize_snp_plot <- ggplot(maize_snp_count, aes(x = Chromosome, y = SNP_count, fill = Chromosome)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "SNP Count per Chromosome (maize)", 
+    x = "Chromosome", 
+    y = "SNP Count"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(hjust = 1, angle = 45, size = 8)) +
+  guides(fill = FALSE) +
+  scale_fill_manual(
+    name = "Maize", 
+    values = c(
+      "#4f81bd", "#4bacc6", "#729aca", "#9983b5", "#4e5ae7", "#7470b3", "#83adeb", "#005AB5", "#1A85FF", "#40B0A6", "#708338",
+"#007a6e"
+    )
+  )
+
+# count SNPs per chromosome for teosinte 
+teosinte_snp_count <- teosinte_join |>
+  group_by(Chromosome) |>
+  summarise(SNP_count = n(), .groups = "drop")
+
+# ensure Chromosome's are in correct order
+teosinte_snp_count < teosinte_snp_count |>
+  mutate(Chromosome = factor(Chromosome, levels = chromosome_order))
+
+# teosinte SNPs per chromosome plot
+teosinte_snp_plot <- ggplot(teosinte_snp_count, aes(x = Chromosome, y = SNP_count, fill = Chromosome)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "SNP Count per Chromosome (teosinte)", 
+    x = "Chromosome", 
+    y = "SNP Count"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(hjust = 1, angle = 45, size = 8)) +
+  guides(fill = FALSE) +
+  scale_fill_manual(
+    name = "Teosinte", 
+    values = c(
+      "#4f81bd", "#4bacc6", "#729aca", "#9983b5", "#4e5ae7", "#7470b3", "#83adeb", "#005AB5", "#1A85FF", "#40B0A6", "#708338",
+"#007a6e"
+    )
+  )
+
+combined_snp_plot <- 
+  (maize_snp_plot +
+     labs(title = "Maize") +
+     theme(
+       axis.title.x = element_text(size = 10), 
+       axis.title.y = element_text(size = 10)
+       )) +
+  (teosinte_snp_plot +
+     labs(title = "Teosinte") +
+     theme(
+       axis.title.x = element_text(size = 10), 
+       axis.title.y = element_blank()
+       )) +
+  plot_annotation(
+    title = "SNP Count per Chromosome", 
+    theme = theme(
+      plot.title = element_text(hjust = 0.5, size = 14)
+    )
+  ) 
+
+combined_snp_plot
 ```
+
+**Explanation**
+
+*insert text*
 
 **Missing data & amount of heterozygosity**
 
