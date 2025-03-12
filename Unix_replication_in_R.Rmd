@@ -168,10 +168,9 @@ process_chr_data <- function(data, chr_num, output_prefix, replace_na, sort_orde
   write_tsv(filtered_data, output_file)
 }
 ```
-
 ```{r}
 # ~~~ maize ascending ~~~
-process_chr_data(
+process_chr_data( # chr1
   data = maize_join, 
   chr_num = 1,
   output_prefix = "maize", 
@@ -180,9 +179,24 @@ process_chr_data(
   output_dir = "maize_data")
 maize_chr1_asc_check <- read_table("maize_data/maize_chr1_asc.txt")
 
-# ~~~ maize descending ~~~
-process_chr_data(maize_join, 1, "maize", "-/-", "desc", "maize_data") 
+lapply(2:10, function(chr) { # chr 2 - 10
+  process_chr_data(maize_join, chr, "maize", "?/?", "asc", "maize_data")
+})
 
+
+# ~~~ maize descending ~~~
+process_chr_data( # chr1
+  data = maize_join, 
+  chr_num = 1,
+  output_prefix = "maize", 
+  replace_na = "-/-", 
+  sort_order = "desc", 
+  output_dir = "maize_data")
+maize_chr1_desc_check <- read_table("maize_data/maize_chr1_desc.txt")
+
+lapply(2:10, function(chr) { # chr 2 - 10
+  process_chr_data(maize_join, chr, "maize", "-/-", "desc", "maize_data")
+})
 
 # ~~~ teosinte ascending ~~~
 
@@ -216,3 +230,5 @@ process_chr_data(maize_join, 1, "maize", "-/-", "desc", "maize_data")
 
 
 ```
+
+**In case git commit & push are too large, use: `git config --global http.postBuffer 1048576000` in terminal**
