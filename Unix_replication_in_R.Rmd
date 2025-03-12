@@ -17,6 +17,7 @@ library(ggplot2) # data visualization
 library(patchwork) # data visualization
 library(janitor) # df clean up
 library(tibble) # df clean up
+library(tidyr)
 
 # read - in
 getwd()
@@ -230,90 +231,62 @@ lapply(2:10, function(chr) { # chr 2 - 10
 })
 ```
 
-#### Data Processing
+## Data Visualization
 
-**SNPs per chromosome**
+**Distribution of SNPs on and across chromosomes**
 
 ```{r}
-# count SNPs per chromosome for maize 
-maize_snp_count <- maize_join |>
-  group_by(Chromosome) |>
-  summarise(SNP_count = n(), .groups = "drop")
+# ~~~ distribution of SNPs on chromosomes (how many SNPs on each chromosome) ~~~
+
+# join maize_join & teosinte_join 
+snp_plot_df <- full_join(maize_join, teosinte_join, by = c("SNP_ID", "Chromosome", "Position"))
 
 # ensure Chromosome's are in correct order
 chromosome_order <- c(as.character(1:10), "multiple", "unknown")
-
-maize_snp_count <- maize_snp_count |>
+snp_plot_df <- snp_plot_df |>
   mutate(Chromosome = factor(Chromosome, levels = chromosome_order))
 
-# maize SNPs per chromosome plot
-maize_snp_plot <- ggplot(maize_snp_count, aes(x = Chromosome, y = SNP_count, fill = Chromosome)) +
-  geom_bar(stat = "identity") +
+# distribution of SNP per chromosome
+ggplot(snp_plot_df, aes(x = Chromosome, fill = Chromosome)) +
+  geom_bar() +
   labs(
-    title = "SNP Count per Chromosome (maize)", 
-    x = "Chromosome", 
-    y = "SNP Count"
+    title = "SNP Distribution Across Chromosomes",
+    x = "Chromosome",
+    y = "SNP Count (unique)"
   ) +
   theme_minimal() +
-  theme(axis.text.x = element_text(hjust = 1, angle = 45, size = 8)) +
-  guides(fill = FALSE) +
   scale_fill_manual(
-    name = "Maize", 
+    name = "Chromosome", 
     values = c(
       "#4f81bd", "#4bacc6", "#729aca", "#9983b5", "#4e5ae7", "#7470b3", "#83adeb", "#005AB5", "#1A85FF", "#40B0A6", "#708338",
 "#007a6e"
     )
   )
 
-# count SNPs per chromosome for teosinte 
-teosinte_snp_count <- teosinte_join |>
-  group_by(Chromosome) |>
-  summarise(SNP_count = n(), .groups = "drop")
+
+# ~~~ distribution of SNPs on chromosomes (how many SNPs on each chromosome) ~~~
+snp_plot2_df <- read_table("working_files/snp_plot2_df.txt")
 
 # ensure Chromosome's are in correct order
-teosinte_snp_count < teosinte_snp_count |>
+chromosome_order <- c(as.character(1:10), "multiple", "unknown")
+snp_plot2_df <- snp_plot2_df |>
   mutate(Chromosome = factor(Chromosome, levels = chromosome_order))
 
-# teosinte SNPs per chromosome plot
-teosinte_snp_plot <- ggplot(teosinte_snp_count, aes(x = Chromosome, y = SNP_count, fill = Chromosome)) +
-  geom_bar(stat = "identity") +
-  labs(
-    title = "SNP Count per Chromosome (teosinte)", 
-    x = "Chromosome", 
-    y = "SNP Count"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(hjust = 1, angle = 45, size = 8)) +
-  guides(fill = FALSE) +
-  scale_fill_manual(
-    name = "Teosinte", 
-    values = c(
-      "#4f81bd", "#4bacc6", "#729aca", "#9983b5", "#4e5ae7", "#7470b3", "#83adeb", "#005AB5", "#1A85FF", "#40B0A6", "#708338",
-"#007a6e"
-    )
+# reshape data to long format and filter non-`?/?"` SNPs
+snp_long <- snp_plot2_df |>
+  pivot_longer(cols = c(contains("_m"), contains("_t")), names_to = "Sample", values_to = "Genotype") |>
+  filter(Genotype != "?/?") |>
+  mutate(
+    Chromosome = factor(Chromosome),  # ensure Chromosome is a factor
+    Group = ifelse(grepl("_m", Sample), "Maize", "Teosinte") # assign group
   )
 
-combined_snp_plot <- 
-  (maize_snp_plot +
-     labs(title = "Maize") +
-     theme(
-       axis.title.x = element_text(size = 10), 
-       axis.title.y = element_text(size = 10)
-       )) +
-  (teosinte_snp_plot +
-     labs(title = "Teosinte") +
-     theme(
-       axis.title.x = element_text(size = 10), 
-       axis.title.y = element_blank()
-       )) +
-  plot_annotation(
-    title = "SNP Count per Chromosome", 
-    theme = theme(
-      plot.title = element_text(hjust = 0.5, size = 14)
-    )
-  ) 
-
-combined_snp_plot
+ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
+  geom_bar() +
+  labs(title = "SNP Distribution Across Chromosomes by Sample Group",
+       x = "Chromosome",
+       y = "SNP Count (occurences)") +
+  theme_minimal()
 ```
 
 **Explanation**
@@ -323,6 +296,11 @@ combined_snp_plot
 **Missing data & amount of heterozygosity**
 
 ```{r}
+
+
+
+
+
 
 
 ```
