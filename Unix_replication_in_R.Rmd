@@ -199,13 +199,33 @@ lapply(2:10, function(chr) { # chr 2 - 10
 })
 
 # ~~~ teosinte ascending ~~~
+process_chr_data( # chr1
+  data = teosinte_join, 
+  chr_num = 1,
+  output_prefix = "teosinte", 
+  replace_na = "?/?", 
+  sort_order = "asc", 
+  output_dir = "teosinte_data")
+teosinte_chr1_asc_check <- read_table("teosinte_data/teosinte_chr1_asc.txt")
 
+lapply(2:10, function(chr) { # chr 2 - 10
+  process_chr_data(teosinte_join, chr, "teosinte", "?/?", "asc", "teosinte_data")
+})
 
 
 # ~~~ teosinte descending ~~~
+process_chr_data( # chr1
+  data = teosinte_join, 
+  chr_num = 1,
+  output_prefix = "teosinte", 
+  replace_na = "-/-", 
+  sort_order = "desc", 
+  output_dir = "teosinte_data")
+teosinte_chr1_desc_check <- read_table("teosinte_data/teosinte_chr1_desc.txt")
 
-
-
+lapply(2:10, function(chr) { # chr 2 - 10
+  process_chr_data(teosinte_join, chr, "teosinte", "-/-", "desc", "teosinte_data")
+})
 ```
 
 #### Data Processing
