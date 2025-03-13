@@ -17,7 +17,13 @@ library(ggplot2) # data visualization
 library(patchwork) # data visualization
 library(janitor) # df clean up
 library(tibble) # df clean up
-library(tidyr)
+library(tidyr) # df clean up 
+
+library(BiocManager) # if you do not have BiocManager already installed, you may need to install and upload
+BiocManager::install("karyoploteR") # data visualization
+library(karyoploteR) # data visualization
+BiocManager::install("BSgenome")
+library(BSgenome)
 
 # read - in
 getwd()
@@ -287,6 +293,7 @@ ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
        x = "Chromosome",
        y = "SNP Count (occurences)") +
   theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45)) +
   scale_fill_manual(name = "Group", 
                     values = c("#e5ab20", "#e34927"))
 ```
@@ -298,7 +305,7 @@ ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
 **Missing data & amount of heterozygosity**
 
 ```{r}
-# 
+# ~~~ heterozygosity ~~~
 snp_long$Genotype_Class <- ifelse(snp_long$Genotype %in% c("A/A", "C/C", "G/G", "T/T"), "Homozygous", "Heterozygous")
 
 # proportion of homozygous and heterozygous sites for each sample 
@@ -343,11 +350,67 @@ ggplot(proportion_group_df, aes(x = Group, y = Proportion, fill = Genotype_Class
     y = "Proportion") +
   scale_fill_manual(values = c("Homozygous" = "darkseagreen", "Heterozygous" = "chocolate")) +
   theme_minimal()
+
+# ~~~ missing data ~~~ 
+
+# reshape data to long format
+snp_long_missing <- snp_plot2_df |>
+  pivot_longer(cols = c(contains("_m"), contains("_t")), names_to = "Sample", values_to = "Genotype") |>
+  mutate(
+    Chromosome = factor(Chromosome),  # ensure Chromosome is a factor
+    Group = ifelse(grepl("_m", Sample), "Maize", "Teosinte"), # assign group
+    Data = ifelse(Genotype == "?/?", "missing", "present")
+  )
+
+# proportion of missing data for each sample 
+missing_proportion_sample <- table(snp_long_missing$Sample, snp_long_missing$Data)
+missing_proportion_sample <- prop.table(missing_proportion_sample, 1)
+
+# Proportion of missing data for each group
+missing_proportion_group <- table(snp_long_missing$Group, snp_long_missing$Data)
+missing_proportion_group <- prop.table(missing_proportion_group, 1)  
+
+print("Proportion of Missing Data for each Sample:")
+print(missing_proportion_sample)
+
+print("Proportion of Missing Data for each Group:")
+print(missing_proportion_group)
+
+# convert proportion tables to data frames for plotting
+proportion_sample_miss_df <- as.data.frame(as.table(missing_proportion_sample))
+proportion_group_miss_df <- as.data.frame(as.table(missing_proportion_group))
+
+colnames(proportion_sample_miss_df) <- c("Sample", "Data_Availability", "Proportion")
+colnames(proportion_group_miss_df) <- c("Group", "Data_Availability", "Proportion")
+
+# plot for each Sample
+ggplot(proportion_sample_miss_df, aes(x = Sample, y = Proportion, fill = Data_Availability)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Proportion of Missing Data by Sample",
+    x = "Sample (one line = one sample)", 
+    y = "Proportion") +
+  scale_fill_manual(values = c("present" = "darkseagreen", "missing" = "chocolate")) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) 
+
+# plot for each Group
+ggplot(proportion_group_miss_df, aes(x = Group, y = Proportion, fill = Data_Availability)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Proportion of Missing by Group",
+    x = "Group", 
+    y = "Proportion") +
+  scale_fill_manual(values = c("present" = "darkseagreen", "missing" = "chocolate")) +
+  theme_minimal()
 ```
 
 **Unique visualization:**
 
 ```{r}
+
+
 
 
 ```
