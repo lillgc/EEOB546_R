@@ -282,11 +282,13 @@ snp_long <- snp_plot2_df |>
   )
 
 ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
-  geom_bar() +
+  geom_bar(position = "dodge") +
   labs(title = "SNP Distribution Across Chromosomes by Sample Group",
        x = "Chromosome",
        y = "SNP Count (occurences)") +
-  theme_minimal()
+  theme_minimal() +
+  scale_fill_manual(name = "Group", 
+                    values = c("#e5ab20", "#e34927"))
 ```
 
 **Explanation**
@@ -296,13 +298,51 @@ ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
 **Missing data & amount of heterozygosity**
 
 ```{r}
+# 
+snp_long$Genotype_Class <- ifelse(snp_long$Genotype %in% c("A/A", "C/C", "G/G", "T/T"), "Homozygous", "Heterozygous")
 
+# proportion of homozygous and heterozygous sites for each sample 
+homozygous_proportion_sample <- table(snp_long$Sample, snp_long$Genotype_Class)
+homozygous_proportion_sample <- prop.table(homozygous_proportion_sample, 1)
 
+# Proportion of homozygous and heterozygous sites for each group
+homozygous_proportion_group <- table(snp_long$Group, snp_long$Genotype_Class)
+homozygous_proportion_group <- prop.table(homozygous_proportion_group, 1)  
 
+print("Proportion of Homozygous and Heterozygous sites for each Sample:")
+print(homozygous_proportion_sample)
 
+print("Proportion of Homozygous and Heterozygous sites for each Group:")
+print(homozygous_proportion_group)
 
+# convert proportion tables to data frames for plotting
+proportion_sample_df <- as.data.frame(as.table(homozygous_proportion_sample))
+proportion_group_df <- as.data.frame(as.table(homozygous_proportion_group))
 
+colnames(proportion_sample_df) <- c("Sample", "Genotype_Class", "Proportion")
+colnames(proportion_group_df) <- c("Group", "Genotype_Class", "Proportion")
 
+# plot for each Sample
+ggplot(proportion_sample_df, aes(x = Sample, y = Proportion, fill = Genotype_Class)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Proportion of Homozygous and Heterozygous Sites by Sample",
+    x = "Sample (one line = one sample)", 
+    y = "Proportion") +
+  scale_fill_manual(values = c("Homozygous" = "darkseagreen", "Heterozygous" = "chocolate")) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) 
+
+# plot for each Group
+ggplot(proportion_group_df, aes(x = Group, y = Proportion, fill = Genotype_Class)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Proportion of Homozygous and Heterozygous Sites by Group",
+    x = "Group", 
+    y = "Proportion") +
+  scale_fill_manual(values = c("Homozygous" = "darkseagreen", "Heterozygous" = "chocolate")) +
+  theme_minimal()
 ```
 
 **Unique visualization:**
