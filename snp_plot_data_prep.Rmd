@@ -1,0 +1,74 @@
+---
+title: "snp_plot_data_prep"
+output: html_document
+date: "2025-03-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# libraries
+library(tidyverse) # basic R functions
+library(janitor) # df clean up
+library(tibble) # df clean up
+
+# read-in (customize to your own computer directory)
+genotype_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/raw_data/fang_et_al_genotypes.txt"
+snp_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/raw_data/snp_position.txt"
+
+genotypes <- read_table(genotype_path)
+snp <- read_table(snp_path)
+```
+
+```{r}
+# SNP position comparison in maize vs. teosinte individuals
+maize_for_plot <- genotypes |>
+  filter(Group %in% c("ZMMIL", "ZMMLR", "ZMMMR")) |>
+  mutate(Sample_ID = paste0(Sample_ID, "_m")) |>
+  select(!c(Group, JG_OTU))
+
+# filtering for teosinte (Group = ZMPBA, ZMPIL, and ZMPJA)
+teosinte_for_plot <- genotypes |>
+  filter(Group %in% c("ZMPBA", "ZMPIL", "ZMPJA")) |>
+  mutate(Sample_ID = paste0(Sample_ID, "_t")) |>
+  select(!c(Group, JG_OTU))
+
+# transposed maize df
+maize_for_plot_t <- as.data.frame(t(maize_for_plot))
+
+# row 1 to column names & row names to column
+maize_for_plot_t <- maize_for_plot_t |>
+  row_to_names(row_number = 1) |>
+  rownames_to_column("SNP_ID")
+
+# joining `snp` & `maize_t` by "SNP_ID"
+maize_plot_join <- full_join(maize_for_plot_t, snp_filt, by = "SNP_ID")
+
+# moving "Chromosome" & "Position" columns forward
+maize_plot_join <- maize_plot_join |>
+  relocate(ncol(maize_plot_join)-1, ncol(maize_plot_join), .after = 1)
+
+# ~~~~~~~~~~~
+
+# transposed teosinte df
+teosinte_for_plot_t <- as.data.frame(t(teosinte_for_plot))
+
+# row 1 to column names & row names to column
+teosinte_for_plot_t <- teosinte_for_plot_t |>
+  row_to_names(row_number = 1) |>
+  rownames_to_column("SNP_ID")
+
+# joining `snp` & `teosinte_t` by "SNP_ID"
+teosinte_plot_join <- full_join(teosinte_for_plot_t, snp_filt, by = "SNP_ID")
+
+# moving "Chromosome" & "Position" columns forward
+teosinte_plot_join <- teosinte_plot_join |>
+  relocate(ncol(teosinte_plot_join)-1, ncol(teosinte_plot_join), .after = 1)
+
+# ~~~~~~~~~~~
+snp_plot2_df <- full_join(maize_plot_join, teosinte_plot_join, by = c("SNP_ID", "Chromosome", "Position"))
+
+write_tsv(snp_plot2_df, "working_files/snp_plot2_df.txt")
+```
