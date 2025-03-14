@@ -1,0 +1,229 @@
+---
+title: "R_assignment_FINAL"
+output: html_document
+date: "2025-03-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Replication of UNIX assignment in R
+
+```{r}
+# libraries
+library(tidyverse) # basic R functions
+library(ggplot2) # data visualization
+library(janitor) # df clean up
+library(tibble) # df clean up
+library(tidyr) # df clean up 
+
+
+# read-in (customize to your own computer directory)
+genotype_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/raw_data/fang_et_al_genotypes.txt"
+snp_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/raw_data/snp_position.txt"
+
+genotypes <- read_table(genotype_path)
+snp <- read_table(snp_path)
+```
+
+#### Data Inspection
+
+```{r}
+# dimensions (# of rows & # of columns)
+dim(genotypes)
+dim(snp)
+
+# variable names 
+colnames(genotypes)
+colnames(snp)
+
+# variable data type 
+unlist(lapply(genotypes, class))
+unlist(lapply(snp, class))
+
+str(genotypes)
+str(snp)
+
+# inital look (first 6 rows of each df)
+head(genotypes)
+head(snp)
+```
+
+**Explanation**
+
+-   The dimensions of the `fang_et_al_genotypes` file is 2782 observations (rows) with 986 variables (columns)
+-   The dimensions of the `snp_position` file is 983 observations (rows) with 15 variables (columns)
+-   First look at the variable names of the `fang` file displays "Sample_ID", "JG_OTU", and "Group" followed by a list of markers
+-   First look at the variable names of the `snp` file displays the key variables needed in this analysis ("SNP_ID", "Chromosome", and "Position") along with 12 other variables irrelevant to this particular analysis
+-   For both the `fang` and `snp` files, all the variables are "character" type, which may pose issues in the future with ordering
+-   The head function displays the first 10 rows of each file revealing the variables in the `fang` file match the marker IDs in the "SNP_ID" column in the `snp` file
+    -   This also gives insight on the content of the data with the `fang` file including mostly genotype calls at SNP markers using biallelic notation (allele/allele), and the `snp`file including information about the SNP markers, such as the chromosome(s) they are located on and where on the chromosome they are located (described by the base pair number)
+
+#### Data Processing
+
+**Filtering**
+
+The following section filters the original `fang` file into two data frames (one for maize & one for teosinte) and removes unnecessary variables. The `all_other_groups` ensures that filtering worked as the observations for all three dfs should add up to the original number of observations in genotypes. This also prepares the `snp` file by removing unnecessary variables for this analysis.
+
+```{r}
+# filtering for maize (Group = ZMMIL, ZMMLR, and ZMMMR) & remove JG_OTU and Group column
+maize <- genotypes |>
+  filter(Group %in% c("ZMMIL", "ZMMLR", "ZMMMR")) |>
+  select(!c(Group, JG_OTU))
+
+# filtering for teosinte (Group = ZMPBA, ZMPIL, and ZMPJA)  remove JG_OTU and Group column
+teosinte <- genotypes |>
+  filter(Group %in% c("ZMPBA", "ZMPIL", "ZMPJA")) |>
+  select(!c(Group, JG_OTU))
+
+# checking filtering success
+all_other_groups <- genotypes |>
+  filter(!Group %in% c("ZMMIL", "ZMMLR", "ZMMMR", "ZMPBA", "ZMPIL", "ZMPJA"))
+total_obs <- nrow(all_other_groups) + nrow(maize) + nrow(teosinte)
+total_obs #2782 checks out
+
+# select for "SNP_ID", "Chromosome", and "Position" columns in `snp` file
+snp_filt <- snp |>
+  select(c("SNP_ID", "Chromosome", "Position"))
+```
+
+**Transposing, Joining**
+
+The following section transposes the `maize` and `teosinte` data frames, ensures the column names are accurate, and creates a column labeled "SNP_ID" containing the SNP markers that match the SNP IDs in the `snp_filt` df to prepare for joining. The two genotype files are joined with the `snp_filt` df to add the chromosome and snp position into the df. Since the columns are added at the end of the column names, they are relocated to the beginning for easy examination.
+
+```{r}
+# ~~~ MAIZE ~~~
+
+# transposed maize df
+maize_t <- as.data.frame(t(maize))
+
+# row 1 to column names & row names to column
+maize_t <- maize_t |>
+  row_to_names(row_number = 1) |>
+  rownames_to_column("SNP_ID")
+
+# joining `snp` & `maize_t` by "SNP_ID"
+maize_join <- full_join(maize_t, snp_filt, by = "SNP_ID")
+
+# moving "Chromosome" & "Position" columns forward
+maize_join <- maize_join |>
+  relocate(ncol(maize_join)-1, ncol(maize_join), .after = 1)
+```
+
+```{r}
+# ~~~ TEOSINTE ~~~
+
+# transposed teosinte df
+teosinte_t <- as.data.frame(t(teosinte))
+
+# row 1 to column names & row names to column
+teosinte_t <- teosinte_t |>
+  row_to_names(row_number = 1) |>
+  rownames_to_column("SNP_ID")
+
+# joining `snp` & `teosinte_t` by "SNP_ID"
+teosinte_join <- full_join(teosinte_t, snp_filt, by = "SNP_ID")
+
+# moving "Chromosome" & "Position" columns forward
+teosinte_join <- teosinte_join |>
+  relocate(ncol(teosinte_join)-1, ncol(teosinte_join), .after = 1)
+```
+
+**Filtering for new file output**
+
+To filter, edit, and create output files efficiently, I designed a function that completes all steps required when provided the following input information:
+
+-   *date* = the input df (`maize_join` or `teosinte_join`)
+-   *chr_num* = the chromosome number to filter for (`1-10`)
+-   *output_prefix* = prefix for naming the output file (`maize` or `teosinte`)
+-   *replace_na* = the string to replace "?/?" values (`?/?` or `-/-`)
+-   *sort_order* (default = "asc") = specifies whether to sort position by ascending ("asc") or descending ("desc") order; if no input is added, the function will automatically sort position in ascending order
+-   *output_dir* = directory (aka folder) output files are saved in
+
+To ensure the function works properly for each file output type & show how the function is used, the full code for chromosome 1 (ascending & descending) for both maize and teosinte are typed. The files output for chromosomes 2-10 were created using a lapply function, which applies a function (`process_chr_data`) to chromosomes (`2:10`).
+
+```{r}
+# ~~~ FUNCTION CREATION ~~~
+
+process_chr_data <- function(data, chr_num, output_prefix, replace_na, sort_order = "asc", output_dir = "processed_data") {
+  # create file output directory (unless it already exists)
+  if(!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = FALSE)
+  }
+  
+  # filter data
+  filtered_data <- data |>
+    filter(Chromosome == chr_num, !grepl("unknown|multiple", Chromosome)) |>
+    mutate(
+      across(everything(), ~ gsub("\\?/\\?", replace_na, .)),
+      Position = as.numeric(as.character(Position))
+      ) |>
+    arrange(if (sort_order == "asc") Position else desc(Position))
+    
+  # write to file
+  output_file <- file.path(output_dir, sprintf("%s_chr%d_%s.txt", output_prefix, chr_num, sort_order))
+  write_tsv(filtered_data, output_file)
+}
+```
+
+```{r}
+# ~~~ OUTPUT FILE CREATION ~~~
+
+# ~~~ maize ascending ~~~
+process_chr_data( 
+  data = maize_join, 
+  chr_num = 1, # chromosome 1
+  output_prefix = "maize", 
+  replace_na = "?/?", 
+  sort_order = "asc", 
+  output_dir = "maize_data")
+
+lapply(2:10, function(chr) { # chromosomes 2 - 10
+  process_chr_data(maize_join, chr, "maize", "?/?", "asc", "maize_data")
+})
+
+
+# ~~~ maize descending ~~~
+process_chr_data( 
+  data = maize_join, 
+  chr_num = 1, # chromosome 1
+  output_prefix = "maize", 
+  replace_na = "-/-", 
+  sort_order = "desc", 
+  output_dir = "maize_data")
+
+lapply(2:10, function(chr) { # chromosomes 2 - 10
+  process_chr_data(maize_join, chr, "maize", "-/-", "desc", "maize_data")
+})
+
+# ~~~ teosinte ascending ~~~
+process_chr_data( 
+  data = teosinte_join, 
+  chr_num = 1, # chromosome 1
+  output_prefix = "teosinte", 
+  replace_na = "?/?", 
+  sort_order = "asc", 
+  output_dir = "teosinte_data")
+
+lapply(2:10, function(chr) { # chromosomes 2 - 10
+  process_chr_data(teosinte_join, chr, "teosinte", "?/?", "asc", "teosinte_data")
+})
+
+
+# ~~~ teosinte descending ~~~
+process_chr_data( 
+  data = teosinte_join, 
+  chr_num = 1, # chromosome 1
+  output_prefix = "teosinte", 
+  replace_na = "-/-", 
+  sort_order = "desc", 
+  output_dir = "teosinte_data")
+
+lapply(2:10, function(chr) { # chromosomes 2 - 10
+  process_chr_data(teosinte_join, chr, "teosinte", "-/-", "desc", "teosinte_data")
+})
+```
+
+
+
