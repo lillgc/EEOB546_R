@@ -18,6 +18,7 @@ library(janitor) # df clean up
 library(tibble) # df clean up
 library(tidyr) # df clean up 
 
+# NOTE: In case git commit & push are too large, use: `git config --global http.postBuffer 1048576000` in terminal
 
 # read-in (customize to your own computer directory)
 genotype_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/raw_data/fang_et_al_genotypes.txt"
@@ -225,5 +226,214 @@ lapply(2:10, function(chr) { # chromosomes 2 - 10
 })
 ```
 
+## Data Visualization
 
+**Distribution of SNPs on and across chromosomes**
 
+```{r}
+# ~~~ distribution of SNPs on chromosomes (how many SNPs on each chromosome) ~~~
+
+# join maize_join & teosinte_join 
+snp_plot_df <- full_join(maize_join, teosinte_join, by = c("SNP_ID", "Chromosome", "Position"))
+
+# ensure chromosomes are in correct order
+chromosome_order <- c(as.character(1:10), "multiple", "unknown")
+snp_plot_df <- snp_plot_df |>
+  mutate(Chromosome = factor(Chromosome, levels = chromosome_order))
+
+# distribution of SNP per chromosome
+ggplot(snp_plot_df, aes(x = Chromosome, fill = Chromosome)) +
+  geom_bar() +
+  labs(
+    title = "SNP Distribution Across Chromosomes",
+    x = "Chromosome",
+    y = "SNP Count (unique)"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(
+    name = "Chromosome", 
+    values = c(
+      "#4f81bd", "#4bacc6", "#729aca", "#9983b5", "#4e5ae7", "#7470b3", "#83adeb", "#005AB5", "#1A85FF", "#40B0A6", "#708338",
+"#007a6e"
+    )
+  )
+```
+
+```{r}
+# ~~~ distribution of SNP occurrences on chromosomes (SNP occurrences across chromosomes in maize and teosinte samples) ~~~
+
+# read-in "snp_plot2_df" file from "working_files" folder on github repository
+# look at "snp_plot_data_prep.Rmd" on git hub repository for how this file was created
+snp_plot2_df_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/working_files/snp_plot2_df.txt"
+
+snp_plot2_df <- read_table(snp_plot2_df_path)
+
+# ensure Chromosome's are in correct order
+chromosome_order <- c(as.character(1:10), "multiple", "unknown")
+snp_plot2_df <- snp_plot2_df |>
+  mutate(Chromosome = factor(Chromosome, levels = chromosome_order))
+
+# reshape data to long format and filter non-`"?/?"` SNPs
+snp_long <- snp_plot2_df |>
+  pivot_longer(cols = c(contains("_m"), contains("_t")), names_to = "Sample", values_to = "Genotype") |>
+  filter(Genotype != "?/?") |>
+  mutate(
+    Chromosome = factor(Chromosome),  # ensure Chromosome is a factor
+    Group = ifelse(grepl("_m", Sample), "Maize", "Teosinte") # assign group
+  )
+
+ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
+  geom_bar(position = "dodge") +
+  labs(title = "SNP Distribution Across Chromosomes by Sample Group",
+       x = "Chromosome",
+       y = "SNP Count (occurences)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45)) +
+  scale_fill_manual(name = "Group", 
+                    values = c("#e5ab20", "#e34927"))
+```
+
+**Explanation**
+
+-   Text
+
+**Missing data & amount of heterozygosity**
+
+```{r}
+# ~~~ HETEROZYGOSITY ~~~
+
+# create column that differentiates hom. vs. het. genotypes
+snp_long$Genotype_Class <- ifelse(snp_long$Genotype %in% c("A/A", "C/C", "G/G", "T/T"), "Homozygous", "Heterozygous")
+
+# proportion of homozygous and heterozygous sites for each sample 
+hom_prop_sample <- table(snp_long$Sample, snp_long$Genotype_Class)
+hom_prop_sample <- prop.table(hom_prop_sample, 1)
+
+# Proportion of homozygous and heterozygous sites for each group
+hom_prop_group <- table(snp_long$Group, snp_long$Genotype_Class)
+hom_prop_group <- prop.table(hom_prop_group, 1)  
+
+print("Proportion of Homozygous and Heterozygous sites for each Sample:")
+print(hom_prop_sample)
+
+print("Proportion of Homozygous and Heterozygous sites for each Group:")
+print(hom_prop_group)
+
+# convert proportion tables to data frames for plotting
+hh_prop_sample_df <- as.data.frame(as.table(hom_prop_sample))
+hh_prop_group_df <- as.data.frame(as.table(hom_prop_group))
+
+colnames(hh_prop_sample_df) <- c("Sample", "Genotype_Class", "Proportion")
+colnames(hh_prop_group_df) <- c("Group", "Genotype_Class", "Proportion")
+
+# plot for each Sample
+ggplot(hh_prop_sample_df, aes(x = Sample, y = Proportion, fill = Genotype_Class)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Proportion of Homozygous and Heterozygous Sites by Sample",
+    x = "Sample (one line = one sample)", 
+    y = "Proportion") +
+  scale_fill_manual(values = c("Homozygous" = "darkseagreen", "Heterozygous" = "chocolate")) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) 
+
+# plot for each Group
+ggplot(hh_prop_group_df, aes(x = Group, y = Proportion, fill = Genotype_Class)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Proportion of Homozygous and Heterozygous Sites by Group",
+    x = "Group", 
+    y = "Proportion") +
+  scale_fill_manual(values = c("Homozygous" = "darkseagreen", "Heterozygous" = "chocolate")) +
+  theme_minimal()
+```
+
+```{r}
+# ~~~ missing data ~~~ 
+
+# # reshape data to long format and filter FOR `?/?"` SNPs
+snp_long_missing <- snp_plot2_df |>
+  pivot_longer(cols = c(contains("_m"), contains("_t")), names_to = "Sample", values_to = "Genotype") |>
+  mutate(
+    Chromosome = factor(Chromosome),  # ensure Chromosome is a factor
+    Group = ifelse(grepl("_m", Sample), "Maize", "Teosinte"), # assign group
+    Data = ifelse(Genotype == "?/?", "missing", "present")
+  )
+
+# proportion of missing data for each sample 
+missing_prop_sample <- table(snp_long_missing$Sample, snp_long_missing$Data)
+missing_prop_sample <- prop.table(missing_prop_sample, 1)
+
+# Proportion of missing data for each group
+missing_prop_group <- table(snp_long_missing$Group, snp_long_missing$Data)
+missing_prop_group <- prop.table(missing_prop_group, 1)  
+
+print("Proportion of Missing Data for each Sample:")
+print(missing_prop_sample)
+
+print("Proportion of Missing Data for each Group:")
+print(missing_prop_group)
+
+# convert proportion tables to data frames for plotting
+miss_prop_sample_df <- as.data.frame(as.table(missing_prop_sample))
+miss_prop_group_df <- as.data.frame(as.table(missing_prop_group))
+
+colnames(miss_prop_sample_df) <- c("Sample", "Data_Availability", "Proportion")
+colnames(miss_prop_group_df) <- c("Group", "Data_Availability", "Proportion")
+
+# plot for each Sample
+ggplot(miss_prop_sample_df, aes(x = Sample, y = Proportion, fill = Data_Availability)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Proportion of Missing Data by Sample",
+    x = "Sample (one line = one sample)", 
+    y = "Proportion") +
+  scale_fill_manual(values = c("present" = "darkseagreen", "missing" = "chocolate")) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) 
+
+# plot for each Group
+ggplot(miss_prop_group_df, aes(x = Group, y = Proportion, fill = Data_Availability)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Proportion of Missing by Group",
+    x = "Group", 
+    y = "Proportion") +
+  scale_fill_manual(values = c("present" = "darkseagreen", "missing" = "chocolate")) +
+  theme_minimal()
+```
+
+**Explanation**
+
+-   Text
+
+**Unique visualization:**
+
+```{r}
+snp_long_chr_only <- snp_long |>
+  filter(Chromosome != c("unknown", "multiple"))
+
+snp_long_nucleotide_df <- snp_long_chr_only |>
+  separate(Genotype, into = c("Nuc1", "Nuc2"), sep = "/")
+
+nucleotide_counts <- snp_long_nucleotide_df |>
+  pivot_longer(cols = c(Nuc1, Nuc2), names_to = "Nuc_position", values_to = "Nucleotide") |>
+  count(Group, Nuc_position, Nucleotide)
+
+# plot results: Stacked bar chart of nucleotide frequencies
+ggplot(nucleotide_counts, aes(x = Nucleotide, y = n, fill = Nuc_position)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~Group) +
+  labs(title = "Nucleotide Counts by Position (1st vs. 2nd) in Maize & Teosinte",
+       x = "Nucleotide",
+       y = "Count") +
+  theme_minimal() +
+  scale_fill_manual(name = "Group", 
+                    values = c("#e5ab20", "#e34927"))
+```
+
+**Explanation**
+
+-   Text
