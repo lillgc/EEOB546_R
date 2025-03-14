@@ -19,11 +19,6 @@ library(janitor) # df clean up
 library(tibble) # df clean up
 library(tidyr) # df clean up 
 
-library(BiocManager) # if you do not have BiocManager already installed, you may need to install and upload
-BiocManager::install("karyoploteR") # data visualization
-library(karyoploteR) # data visualization
-BiocManager::install("BSgenome")
-library(BSgenome)
 
 # read - in
 getwd()
@@ -409,10 +404,26 @@ ggplot(proportion_group_miss_df, aes(x = Group, y = Proportion, fill = Data_Avai
 **Unique visualization:**
 
 ```{r}
+snp_long_chr_only_t <- snp_long |>
+  filter(Chromosome != c("unknown", "multiple"))
 
+snp_long_nucleotide_df <- snp_long_chr_only_t |>
+  separate(Genotype, into = c("Nuc1", "Nuc2"), sep = "/")
 
+nucleotide_counts <- snp_long_nucleotide_df |>
+  pivot_longer(cols = c(Nuc1, Nuc2), names_to = "Nuc_position", values_to = "Nucleotide") |>
+  count(Group, Nuc_position, Nucleotide)
 
-
+# plot results: Stacked bar chart of nucleotide frequencies
+ggplot(nucleotide_counts, aes(x = Nucleotide, y = n, fill = Nuc_position)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~Group) +
+  labs(title = "Nucleotide Counts by Position (1st vs. 2nd) in Maize & Teosinte",
+       x = "Nucleotide",
+       y = "Count") +
+  theme_minimal() +
+  scale_fill_manual(name = "Group", 
+                    values = c("#e5ab20", "#e34927"))
 ```
 
 **In case git commit & push are too large, use: `git config --global http.postBuffer 1048576000` in terminal**
