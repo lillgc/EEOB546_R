@@ -36,7 +36,7 @@ This Rmd produces 7 figures
 4. proportion of homozygous/heterozygous genotypes for each group
 5. proportion of missing genotype data for each sample
 6. proportion of missing genotype data for each group
-7. nucleotide counts at first and second positions of genotype across groups
+7. Unique genotype absolute and relative counts across groups
 
 
 ## Two peer-reviewed repositories of two students ("Chiang_review1.Rmd" & "Chiang_review2.Rmd")
