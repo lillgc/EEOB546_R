@@ -29,7 +29,7 @@ The following data inspection techniques were reviewed for each data frame:
 
 ## Additional analysis and visualization
 
-This Rmd produces 7 figures
+This Rmd produces 7 figures (all saved in `figures` folder)
 1. distribution of SNP per chromosome (how many SNPs on each chromosome)
 2. distribution of SNP occurrences on chromosomes (SNP occurrences across chromosomes in maize and teosinte samples)
 3. proportion of homozygous/heterozygous genotypes for each sample 
@@ -37,6 +37,8 @@ This Rmd produces 7 figures
 5. proportion of missing genotype data for each sample
 6. proportion of missing genotype data for each group
 7. Unique genotype absolute and relative counts across groups
+
+The data frame used to plot these figures was generated in another Rmd (`snp_plot_data_prep`) available in the repository in the `working_files` folder. This file must be read in to generate the figures of this analysis. 
 
 
 ## Two peer-reviewed repositories of two students ("Chiang_review1.Rmd" & "Chiang_review2.Rmd")
