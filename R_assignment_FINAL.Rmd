@@ -1,6 +1,8 @@
 ---
 title: "R_assignment_FINAL"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 date: "2025-03-14"
 ---
 
@@ -10,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Replication of UNIX assignment in R
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # libraries
 library(tidyverse) # basic R functions
 library(janitor) # df clean up
@@ -31,7 +33,7 @@ snp <- read_table(snp_path)
 
 #### Data Inspection
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # dimensions (# of rows & # of columns)
 dim(genotypes)
 dim(snp)
@@ -44,8 +46,8 @@ colnames(snp)
 unlist(lapply(genotypes, class))
 unlist(lapply(snp, class))
 
-str(genotypes)
-str(snp)
+# str(genotypes)    # can remove "#" from this code if desired; removed for storage when knitting
+# str(snp)
 
 # inital look (first 6 rows of each df)
 head(genotypes)
@@ -68,7 +70,7 @@ head(snp)
 
 The following section filters the original `fang` file into two data frames (one for maize & one for teosinte) and removes unnecessary variables. The `all_other_groups` ensures that filtering worked as the observations for all three dfs should add up to the original number of observations in genotypes. This also prepares the `snp` file by removing unnecessary variables for this analysis.
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # filtering for maize (Group = ZMMIL, ZMMLR, and ZMMMR) & remove JG_OTU and Group column
 maize <- genotypes |>
   filter(Group %in% c("ZMMIL", "ZMMLR", "ZMMMR")) |>
@@ -94,7 +96,7 @@ snp_filt <- snp |>
 
 The following section transposes the `maize` and `teosinte` data frames, ensures the column names are accurate, and creates a column labeled "SNP_ID" containing the SNP markers that match the SNP IDs in the `snp_filt` df to prepare for joining. The two genotype files are joined with the `snp_filt` df to add the chromosome and snp position into the df. Since the columns are added at the end of the column names, they are relocated to the beginning for easy examination.
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # ~~~ MAIZE ~~~
 
 # transposed maize df
@@ -113,7 +115,7 @@ maize_join <- maize_join |>
   relocate(ncol(maize_join)-1, ncol(maize_join), .after = 1)
 ```
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # ~~~ TEOSINTE ~~~
 
 # transposed teosinte df
@@ -145,7 +147,7 @@ To filter, edit, and create output files efficiently, I designed a function that
 
 To ensure the function works properly for each file output type & show how the function is used, the full code for chromosome 1 (ascending & descending) for both maize and teosinte are typed. The files output for chromosomes 2-10 were created using a lapply function, which applies a function (`process_chr_data`) to chromosomes (`2:10`).
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # ~~~ FUNCTION CREATION ~~~
 
 process_chr_data <- function(data, chr_num, output_prefix, replace_na, sort_order = "asc", output_dir = "processed_data") {
@@ -169,7 +171,7 @@ process_chr_data <- function(data, chr_num, output_prefix, replace_na, sort_orde
 }
 ```
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # ~~~ OUTPUT FILE CREATION ~~~
 
 # ~~~ maize ascending ~~~
@@ -231,7 +233,7 @@ lapply(2:10, function(chr) { # chromosomes 2 - 10
 
 **Distribution of SNPs on and across chromosomes**
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # ~~~ distribution of SNPs on chromosomes (how many SNPs on each chromosome) ~~~
 
 # join maize_join & teosinte_join 
@@ -241,6 +243,8 @@ snp_plot_df <- full_join(maize_join, teosinte_join, by = c("SNP_ID", "Chromosome
 chromosome_order <- c(as.character(1:10), "multiple", "unknown")
 snp_plot_df <- snp_plot_df |>
   mutate(Chromosome = factor(Chromosome, levels = chromosome_order))
+```
+```{r}
 
 # distribution of SNP per chromosome
 plot1a <- ggplot(snp_plot_df, aes(x = Chromosome, fill = Chromosome)) +
@@ -273,7 +277,7 @@ ggsave("SNP Distribution Across Chromosomes.png", plot = plot1a)
 -   Chromosome 1 has the most unique SNPs present with Chromosome 5 and 7 having the second and third most, respectfully. Other than those three chromosomes, the SNP count decreases as the chromosome number increases.
 -   There are few SNPs located on multiple chromosomes.
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # ~~~ distribution of SNP occurrences on chromosomes (SNP occurrences across chromosomes in maize and teosinte samples) ~~~
 
 # read-in "snp_plot2_df" file from "working_files" folder on github repository
@@ -295,7 +299,8 @@ snp_long <- snp_plot2_df |>
     Chromosome = factor(Chromosome),  # ensure Chromosome is a factor
     Group = ifelse(grepl("_m", Sample), "Maize", "Teosinte") # assign group
   )
-
+```
+```{r}
 plot1b <- ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
   geom_bar(position = "dodge") +
   labs(title = "SNP Distribution Across Chromosomes by Sample Group",
@@ -321,7 +326,7 @@ ggsave("SNP Distribution Across Chromosomes by Sample Group.png", plot = plot1b)
 
 **Missing data & amount of heterozygosity**
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # ~~~ HETEROZYGOSITY ~~~
 
 # create column that differentiates hom. vs. het. genotypes
@@ -335,19 +340,14 @@ hom_prop_sample <- prop.table(hom_prop_sample, 1)
 hom_prop_group <- table(snp_long$Group, snp_long$Genotype_Class)
 hom_prop_group <- prop.table(hom_prop_group, 1)  
 
-print("Proportion of Homozygous and Heterozygous sites for each Sample:")
-print(hom_prop_sample)
-
-print("Proportion of Homozygous and Heterozygous sites for each Group:")
-print(hom_prop_group)
-
 # convert proportion tables to data frames for plotting
 hh_prop_sample_df <- as.data.frame(as.table(hom_prop_sample))
 hh_prop_group_df <- as.data.frame(as.table(hom_prop_group))
 
 colnames(hh_prop_sample_df) <- c("Sample", "Genotype_Class", "Proportion")
 colnames(hh_prop_group_df) <- c("Group", "Genotype_Class", "Proportion")
-
+```
+```{r}
 # plot for each Sample
 plot2a <- ggplot(hh_prop_sample_df, aes(x = Sample, y = Proportion, fill = Genotype_Class)) +
   geom_bar(stat = "identity", position = "dodge") +
@@ -382,7 +382,7 @@ ggsave("Proportion of Homozygous and Heterozygous Sites by Group.png", plot = pl
 -   Plot 2a displays the proportion of homozygous and heterozygous sites for each sample (one line = one sample); however this figure is hard to read due to the high number of samples.
 -   Plot 2b groups the data by species (maize & teosinte) and displays the proportion of homozygous and heterozygous sites in a much simpler way. In this plot, it is obvious that there are significantly more homozygous genotypes than heterozygous in both the maize and teosinte samples.
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 # ~~~ missing data ~~~ 
 
 # # reshape data to long format and filter FOR `?/?"` SNPs
@@ -414,7 +414,8 @@ miss_prop_group_df <- as.data.frame(as.table(missing_prop_group))
 
 colnames(miss_prop_sample_df) <- c("Sample", "Data_Availability", "Proportion")
 colnames(miss_prop_group_df) <- c("Group", "Data_Availability", "Proportion")
-
+```
+```{r}
 # plot for each Sample
 plot2c <- ggplot(miss_prop_sample_df, aes(x = Sample, y = Proportion, fill = Data_Availability)) +
   geom_bar(stat = "identity", position = "dodge") +
@@ -451,14 +452,15 @@ ggsave("Proportion of Missing Data by Group.png", plot = plot2d)
 
 **Unique visualization:**
 
-```{r}
+```{r, echo=TRUE, results="hide"}
 snp_long_chr_only <- snp_long |>
   filter(Chromosome != c("unknown", "multiple"))
 
 genotype_counts <- snp_long_chr_only |>
   pivot_longer(cols = c(Genotype), names_to = "Genotypes", values_to = "Unique_genotypes") |>
   count(Group, Unique_genotypes)
-
+```
+```{r}
 # plot results: Stacked bar chart of genotype frequencies
 count_plot <- ggplot(genotype_counts, aes(x = Group, y = n, fill = Unique_genotypes)) +
   geom_bar(stat = "identity", position = "dodge") +
