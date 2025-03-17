@@ -13,14 +13,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 # libraries
 library(tidyverse) # basic R functions
-library(ggplot2) # data visualization
 library(janitor) # df clean up
 library(tibble) # df clean up
 library(tidyr) # df clean up 
+library(ggplot2) # data visualization
+library(patchwork) # data visualization
 
 # NOTE: In case git commit & push are too large, use: `git config --global http.postBuffer 1048576000` in terminal
 
-# read-in (customize to your own computer directory)
+# read-in (customize to your own computer director: "/.../.../raw_data/fang_et_al_genotypes.txt")
 genotype_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/raw_data/fang_et_al_genotypes.txt"
 snp_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/raw_data/snp_position.txt"
 
@@ -242,7 +243,7 @@ snp_plot_df <- snp_plot_df |>
   mutate(Chromosome = factor(Chromosome, levels = chromosome_order))
 
 # distribution of SNP per chromosome
-ggplot(snp_plot_df, aes(x = Chromosome, fill = Chromosome)) +
+plot1a <- ggplot(snp_plot_df, aes(x = Chromosome, fill = Chromosome)) +
   geom_bar() +
   labs(
     title = "SNP Distribution Across Chromosomes",
@@ -250,6 +251,9 @@ ggplot(snp_plot_df, aes(x = Chromosome, fill = Chromosome)) +
     y = "SNP Count (unique)"
   ) +
   theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45),
+    legend.position = "none") +
   scale_fill_manual(
     name = "Chromosome", 
     values = c(
@@ -257,7 +261,17 @@ ggplot(snp_plot_df, aes(x = Chromosome, fill = Chromosome)) +
 "#007a6e"
     )
   )
+
+plot1a
+ggsave("SNP Distribution Across Chromosomes.png", plot = plot1a)
 ```
+
+**Explanation**
+
+-   First, the separated `maize_join` and `teosinte_join` dfs were rejoined by the "SNP_ID", "Chromosome", and "Position" columns. A chromosome order was established and assigned to the df to ensure correct order when plotting data.
+-   The plot displays the counts of unique SNP ids for each chromosome, including SNPs on multiple or unknown chromosomes.
+-   Chromosome 1 has the most unique SNPs present with Chromosome 5 and 7 having the second and third most, respectfully. Other than those three chromosomes, the SNP count decreases as the chromosome number increases.
+-   There are few SNPs located on multiple chromosomes.
 
 ```{r}
 # ~~~ distribution of SNP occurrences on chromosomes (SNP occurrences across chromosomes in maize and teosinte samples) ~~~
@@ -282,7 +296,7 @@ snp_long <- snp_plot2_df |>
     Group = ifelse(grepl("_m", Sample), "Maize", "Teosinte") # assign group
   )
 
-ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
+plot1b <- ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
   geom_bar(position = "dodge") +
   labs(title = "SNP Distribution Across Chromosomes by Sample Group",
        x = "Chromosome",
@@ -291,11 +305,19 @@ ggplot(snp_long, aes(x = Chromosome, fill = Group)) +
   theme(axis.text.x = element_text(angle = 45)) +
   scale_fill_manual(name = "Group", 
                     values = c("#e5ab20", "#e34927"))
+
+plot1b
+ggsave("SNP Distribution Across Chromosomes by Sample Group.png", plot = plot1b)
 ```
 
 **Explanation**
 
--   Text
+-   An additional dataset must be read in from the working_files folder. The code used to generate this dataset is available in the GitHub repository under snp_plot_data_prep.Rmd.
+-   To distinguish between groups in the data, an identifier was added to the sample names, facilitating better filtering when pivoting the table into a long format.
+-   Samples with unknown nucleotides were removed, as they will be analyzed separately later.
+-   The plot visualizes the total number of times SNPs appears in a sample per chromosome. The two groups, maize and teosinte, are color-coded to highlight differences in SNP distributions.
+-   The observed trends align with the previous plot (“SNP Distribution Across Chromosomes”): Chromosomes 1, 5, and 7 exhibit the highest SNP occurrences, which is expected given the greater number of SNPs present on these chromosomes.
+-   SNP counts are higher in maize samples, though this may be attributed to the larger number of maize samples collected (1,573 vs. 975), which could explain the visual difference in counts.
 
 **Missing data & amount of heterozygosity**
 
@@ -309,7 +331,7 @@ snp_long$Genotype_Class <- ifelse(snp_long$Genotype %in% c("A/A", "C/C", "G/G", 
 hom_prop_sample <- table(snp_long$Sample, snp_long$Genotype_Class)
 hom_prop_sample <- prop.table(hom_prop_sample, 1)
 
-# Proportion of homozygous and heterozygous sites for each group
+# proportion of homozygous and heterozygous sites for each group
 hom_prop_group <- table(snp_long$Group, snp_long$Genotype_Class)
 hom_prop_group <- prop.table(hom_prop_group, 1)  
 
@@ -327,7 +349,7 @@ colnames(hh_prop_sample_df) <- c("Sample", "Genotype_Class", "Proportion")
 colnames(hh_prop_group_df) <- c("Group", "Genotype_Class", "Proportion")
 
 # plot for each Sample
-ggplot(hh_prop_sample_df, aes(x = Sample, y = Proportion, fill = Genotype_Class)) +
+plot2a <- ggplot(hh_prop_sample_df, aes(x = Sample, y = Proportion, fill = Genotype_Class)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(
     title = "Proportion of Homozygous and Heterozygous Sites by Sample",
@@ -339,7 +361,7 @@ ggplot(hh_prop_sample_df, aes(x = Sample, y = Proportion, fill = Genotype_Class)
         axis.ticks.x = element_blank()) 
 
 # plot for each Group
-ggplot(hh_prop_group_df, aes(x = Group, y = Proportion, fill = Genotype_Class)) +
+plot2b <- ggplot(hh_prop_group_df, aes(x = Group, y = Proportion, fill = Genotype_Class)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(
     title = "Proportion of Homozygous and Heterozygous Sites by Group",
@@ -347,7 +369,18 @@ ggplot(hh_prop_group_df, aes(x = Group, y = Proportion, fill = Genotype_Class)) 
     y = "Proportion") +
   scale_fill_manual(values = c("Homozygous" = "darkseagreen", "Heterozygous" = "chocolate")) +
   theme_minimal()
+
+plot2a
+plot2b
+ggsave("Proportion of Homozygous and Heterozygous Sites by Sample.png", plot = plot2a)
+ggsave("Proportion of Homozygous and Heterozygous Sites by Group.png", plot = plot2b)
 ```
+
+**Explanation**
+
+-   An additional column in `snp_long` df was generated separating the homozygous and heterozygous genotypes. The proportion of homozygous and heterozygous sites for each sample and each group were calculated and plotted.
+-   Plot 2a displays the proportion of homozygous and heterozygous sites for each sample (one line = one sample); however this figure is hard to read due to the high number of samples.
+-   Plot 2b groups the data by species (maize & teosinte) and displays the proportion of homozygous and heterozygous sites in a much simpler way. In this plot, it is obvious that there are significantly more homozygous genotypes than heterozygous in both the maize and teosinte samples.
 
 ```{r}
 # ~~~ missing data ~~~ 
@@ -383,7 +416,7 @@ colnames(miss_prop_sample_df) <- c("Sample", "Data_Availability", "Proportion")
 colnames(miss_prop_group_df) <- c("Group", "Data_Availability", "Proportion")
 
 # plot for each Sample
-ggplot(miss_prop_sample_df, aes(x = Sample, y = Proportion, fill = Data_Availability)) +
+plot2c <- ggplot(miss_prop_sample_df, aes(x = Sample, y = Proportion, fill = Data_Availability)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(
     title = "Proportion of Missing Data by Sample",
@@ -395,7 +428,7 @@ ggplot(miss_prop_sample_df, aes(x = Sample, y = Proportion, fill = Data_Availabi
         axis.ticks.x = element_blank()) 
 
 # plot for each Group
-ggplot(miss_prop_group_df, aes(x = Group, y = Proportion, fill = Data_Availability)) +
+plot2d <- ggplot(miss_prop_group_df, aes(x = Group, y = Proportion, fill = Data_Availability)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(
     title = "Proportion of Missing by Group",
@@ -403,11 +436,18 @@ ggplot(miss_prop_group_df, aes(x = Group, y = Proportion, fill = Data_Availabili
     y = "Proportion") +
   scale_fill_manual(values = c("present" = "darkseagreen", "missing" = "chocolate")) +
   theme_minimal()
+
+plot2c
+plot2d
+ggsave("Proportion of Missing Data by Sample.png", plot = plot2c)
+ggsave("Proportion of Missing Data by Group.png", plot = plot2d)
 ```
 
 **Explanation**
 
--   Text
+-   The same data prep and analysis performed for plot2a and plot2b were done to examine missing genotypes from the samples.
+-   Plot 2c displays the proportion of missing and present data sites for each sample (one line = one sample); however this figure is hard to read due to the high number of samples.
+-   Plot 2d groups the data by species (maize & teosinte) and displays the proportion of missing and present data sites in a much simpler way. In this plot, it is obvious that there are significantly more present data than missing in both the maize and teosinte samples, allowing for subsequent analyses to be completed with confidence.
 
 **Unique visualization:**
 
@@ -415,25 +455,65 @@ ggplot(miss_prop_group_df, aes(x = Group, y = Proportion, fill = Data_Availabili
 snp_long_chr_only <- snp_long |>
   filter(Chromosome != c("unknown", "multiple"))
 
-snp_long_nucleotide_df <- snp_long_chr_only |>
-  separate(Genotype, into = c("Nuc1", "Nuc2"), sep = "/")
+genotype_counts <- snp_long_chr_only |>
+  pivot_longer(cols = c(Genotype), names_to = "Genotypes", values_to = "Unique_genotypes") |>
+  count(Group, Unique_genotypes)
 
-nucleotide_counts <- snp_long_nucleotide_df |>
-  pivot_longer(cols = c(Nuc1, Nuc2), names_to = "Nuc_position", values_to = "Nucleotide") |>
-  count(Group, Nuc_position, Nucleotide)
-
-# plot results: Stacked bar chart of nucleotide frequencies
-ggplot(nucleotide_counts, aes(x = Nucleotide, y = n, fill = Nuc_position)) +
+# plot results: Stacked bar chart of genotype frequencies
+count_plot <- ggplot(genotype_counts, aes(x = Group, y = n, fill = Unique_genotypes)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~Group) +
-  labs(title = "Nucleotide Counts by Position (1st vs. 2nd) in Maize & Teosinte",
-       x = "Nucleotide",
+  labs(title = "Genotype Counts by Position (1st vs. 2nd) in Maize & Teosinte",
+       x = "Group",
+       y = "Count") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_manual(name = "Group", 
+                    values = c("forestgreen", "#808080", "#c97044", "#4e5ae7", "#810000", "#1a38ed", "#439f47", "#ff8100", "#e9e14a", "#83adeb", "#bfbfbf"))
+
+relative_plot <- ggplot(genotype_counts, aes(x = Group, y = n, fill = Unique_genotypes)) +
+  geom_bar(stat = "identity", position = "fill") +
+  labs(title = "Genotype Counts by Position (1st vs. 2nd) in Maize & Teosinte",
+       x = "Group",
        y = "Count") +
   theme_minimal() +
   scale_fill_manual(name = "Group", 
-                    values = c("#e5ab20", "#e34927"))
+                    values = c("forestgreen", "#808080", "#c97044", "#4e5ae7", "#810000", "#1a38ed", "#439f47", "#ff8100", "#e9e14a", "#83adeb", "#bfbfbf"))
+
+
+plot3 <- (count_plot +
+            labs(title = "Count") +
+            theme(
+              axis.title.x = element_blank(),
+              axis.title.y = element_text(size = 12))) +
+  (relative_plot +
+     labs(title = "Relative Count") +
+     theme(
+       axis.title.x = element_blank(),
+       axis.title.y = element_blank()
+     )) +
+  plot_annotation(
+    title = "Unique Genotype Counts for Maize and Teosinte Samples",
+    theme = theme(
+      plot.title = element_text(hjust = 0.5, size = 14)
+    )
+  ) &
+  theme(
+    axis.title.x = element_text(size = 10)
+  )
+
+plot3
+ggsave("Unique Genotype Counts for Maize and Teosinte Samples.png", plot = plot3)
 ```
 
 **Explanation**
 
--   Text
+-   This figure compares the distribution of unique genotypes between maize and teosinte samples using two different visualizations: Absolute Count (left) vs. Relative Count (right) of nucleotide pairings
+-   Left Plot: Absolute Count
+    -   This plot shows the absolute count of different genotypes (e.g., A/A, C/G, G/T, etc.) within each group (Maize vs. Teosinte).
+    -   Some genotypes, such as C/C and G/G, appear to be much more frequent than others.
+    -   The maize group has higher absolute counts of some genotypes, suggesting a greater total number of SNPs or samples in this group.
+    -   There are visible differences in genotype distributions between maize and teosinte, suggesting some genotypes are more common in one group.
+-   Right Plot: Relative Count
+    -   This plot represents the relative frequency (proportion) of each genotype within maize and teosinte.
+    -   Since the total height of the bars is normalized to 1, this allows for easy comparison of genotype composition between groups.
+    -   While the absolute counts differ (left plot), the relative proportions of genotypes appear similar between maize and teosinte.
