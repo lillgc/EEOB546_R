@@ -10,9 +10,9 @@ This assignment consists of two parts:
 
 1. DATA INSPECTION
 
-Two files were read into the environment: `fang_et_al_genotypes` and `snp_position`. 
-- `fang_et_al_genotypes` contains genetic information about the alleles preesnt at specific SNPs (single nucleotide variations in DNA sequences) in maize, teosinte, and tripsacum samples
-- `snp_position` contains locational information about the SNPs present in the `fang_et_al_genotypes` file (including Chromosome & specific nucleotide position on the chromosome)
+Two files were read into the environment: `fang_et_al_genotypes` and `snp_position` using github file path. 
+- `fang_et_al_genotypes` contains genetic information about the alleles present at specific SNPs (single nucleotide variations in DNA sequences) in maize, teosinte, and tripsacum samples
+- `snp_position` contains location information about the SNPs present in the `fang_et_al_genotypes` file (including Chromosome & specific nucleotide position on the chromosome)
 
 The following data inspection techniques were reviewed for each data frame:
 - data frame dimensions (# rows, # columns)
@@ -38,7 +38,7 @@ This Rmd produces 7 figures (all saved in `figures` folder)
 6. proportion of missing genotype data for each group
 7. Unique genotype absolute and relative counts across groups
 
-The data frame used to plot these figures was generated in another Rmd (`snp_plot_data_prep`) available in the repository in the `working_files` folder. This file must be read in to generate the figures of this analysis. 
+The data frame used to plot these figures was generated in another Rmd (`snp_plot_data_prep`) available in the repository in the `working_files` folder. This file must be read in to generate the figures of this analysis. UPDATE: file path was changed from home computer to git hub, so no alterations to the code will need to be complete. 
 
 
 ## Two peer-reviewed repositories of two students ("Chiang_review1.Rmd" & "Chiang_review2.Rmd")
