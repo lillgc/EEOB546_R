@@ -23,9 +23,9 @@ library(patchwork) # data visualization
 
 # NOTE: In case git commit & push are too large, use: `git config --global http.postBuffer 1048576000` in terminal
 
-# read-in (customize to your own computer director: "/.../.../raw_data/fang_et_al_genotypes.txt")
-genotype_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/raw_data/fang_et_al_genotypes.txt"
-snp_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/raw_data/snp_position.txt"
+# read-in (files from github)
+genotype_path <- "https://raw.githubusercontent.com/lillgc/EEOB546_R/refs/heads/main/raw_data/fang_et_al_genotypes.txt"
+snp_path <- "https://raw.githubusercontent.com/lillgc/EEOB546_R/refs/heads/main/raw_data/snp_position.txt"
 
 genotypes <- read_table(genotype_path)
 snp <- read_table(snp_path)
@@ -282,7 +282,7 @@ ggsave("SNP Distribution Across Chromosomes.png", plot = plot1a)
 
 # read-in "snp_plot2_df" file from "working_files" folder on github repository
 # look at "snp_plot_data_prep.Rmd" on git hub repository for how this file was created
-snp_plot2_df_path <- "/Users/lilliang/Documents/Spring_2025/EEOB5460/R_assignment/EEOB546_R/working_files/snp_plot2_df.txt"
+snp_plot2_df_path <- "https://raw.githubusercontent.com/lillgc/EEOB546_R/refs/heads/main/working_files/snp_plot2_df.txt"
 
 snp_plot2_df <- read_table(snp_plot2_df_path)
 
