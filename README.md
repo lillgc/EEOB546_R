@@ -41,6 +41,7 @@ This Rmd produces 7 figures (all saved in `figures` folder)
 The data frame used to plot these figures was generated in another Rmd (`snp_plot_data_prep`) available in the repository in the `working_files` folder. This file must be read in to generate the figures of this analysis. UPDATE: file path was changed from home computer to git hub, so no alterations to the code will need to be complete. 
 
 
-## Two peer-reviewed repositories of two students ("Chiang_review1.Rmd" & "Chiang_review2.Rmd")
+## Two peer-reviewed repositories of two students ("Chiang_review.Rmd" & "Chiang_review2.Rmd")
 
-*insert text*
+- Two peer reviews were sent to the following students' github repository: Viraaj Vishnu Prasad (https://github.com/Raaj20/BCB5460_R_Assignment/blob/main/Chiang_review.pdf) & Sristi Dey (https://github.com/Sristi2025/BCB546_R_programming/blob/main/Chiang_review2.pdf)
+- Two students reviewed this github repository: Memis Bilgici & Zheyuan Zhang (currently awaiting their pull requests containing their reviews)
