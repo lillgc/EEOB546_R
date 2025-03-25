@@ -1,0 +1,12 @@
+---
+title: "Zhang_review"
+output: pdf_document
+---
+
+## Comments
+
+- The GitHub repository is well organized. Output files for both maize and teosinte are placed in clearly named folders, and they are all generated in the correct formats. This structure makes it easy to follow and find specific results.
+  
+- The `README.md` provides a clear summary of the workflow, which helps readers understand how the data were processed and how the analysis was carried out. It’s concise but informative.
+
+- The plots meet the assignment requirements and are clean and easy to interpret. The visual style is minimal, which works well in this context and keeps the focus on the data.
